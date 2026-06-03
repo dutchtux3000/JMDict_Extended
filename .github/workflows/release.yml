@@ -76,7 +76,7 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3.0.0
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          # token: ${{ secrets.GH_TOKEN }}
           tag_name: ${{ steps.tag_version.outputs.tag }}
           name: "${{ steps.tag_version.outputs.tag }}"
           body: "This is a weekly automated release with updated data from (mostly JMDict) the latest repositories."
