@@ -5,7 +5,7 @@ import shutil
 import os 
 
 from io import BytesIO
-from zipfile import ZipFile, ZIP_DEFLATED
+from zipfile import ZipFile
 from urllib.request import urlopen
 from datetime import date
 from collections import defaultdict
@@ -29,6 +29,54 @@ def downloadAndExtract(url, pathTo="./temp"):
     zipfile.extractall(path=pathTo)
     for fileName in zipfile.namelist():
         return fileName
+
+def loadTermMetaBank(url):
+    response = urlopen(url)
+    with ZipFile(BytesIO(response.read())) as zipfile:
+        for fileName in zipfile.namelist():
+            if fileName.startswith("term_meta_bank_") and fileName.endswith(".json"):
+                return json.loads(zipfile.read(fileName))
+    raise ValueError("No term_meta_bank_*.json found in zip")
+
+def parseFreqMetaData(data):
+    if not isinstance(data, dict):
+        return None
+    if "frequency" in data and "reading" in data:
+        freq = data["frequency"]
+        if not isinstance(freq, dict) or "value" not in freq:
+            return None
+        return {
+            "value": freq["value"],
+            "displayValue": freq.get("displayValue", str(freq["value"])),
+            "reading": data["reading"],
+        }
+    if "value" in data:
+        return {
+            "value": data["value"],
+            "displayValue": data.get("displayValue", str(data["value"])),
+            "reading": None,
+        }
+    return None
+
+def mergeFreqForSurfaces(freqLookup, surfaces, allowed_readings=None):
+    seen = set()
+    merged = []
+    for surface in surfaces:
+        if not surface:
+            continue
+        for item in freqLookup.get(surface, []):
+            reading = item.get("reading")
+            if reading is not None:
+                if allowed_readings is None or reading not in allowed_readings:
+                    continue
+            key = (item["value"], item.get("displayValue"))
+            if key not in seen:
+                seen.add(key)
+                merged.append({
+                    "value": item["value"],
+                    "displayValue": item["displayValue"],
+                })
+    return merged
 
 def fileExists(path):
     filename, extension = os.path.splitext(path)
@@ -59,6 +107,16 @@ def createDictonary():
     pitchData = {}
     with open("data/wadoku_pitchdb.json", "r", encoding="utf-8-sig") as file:
         pitchData = json.load(file)
+
+    freqURL = "https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip"
+    print("Fetching JPDB frequency data...")
+    freqLookup = defaultdict(list)
+    for expression, mode, data in loadTermMetaBank(freqURL):
+        if mode != "freq":
+            continue
+        parsed = parseFreqMetaData(data)
+        if parsed:
+            freqLookup[expression].append(parsed)
 
     # Furigana Data:
     furiganaReleaseURL = getLatestReleaseURL(
@@ -111,6 +169,16 @@ def createDictonary():
                 kanjiObject["furigana"] = []
                 kanjiObject["jlptLevel"]  = None
                 kanjiObject["pitchAccent"] = []
+                if kanji:
+                    kanjiObject["freq"] = mergeFreqForSurfaces(
+                        freqLookup, [kanji], readings
+                    )
+                    if not kanjiObject["freq"]:
+                        kanjiObject["freq"] = mergeFreqForSurfaces(
+                            freqLookup, readings, readings
+                        )
+                else:
+                    kanjiObject["freq"] = []
 
                 variants = furiganaLookup.get(kanji, [])
 
@@ -141,6 +209,11 @@ def createDictonary():
                 kana = kanaObject.get("text")
                 kanaObject["jlptLevel"]  = None
                 kanaObject["pitchAccent"] = []
+                kanaObject["freq"] = mergeFreqForSurfaces(
+                    freqLookup,
+                    [kana] if kana else [],
+                    {kana} if kana else None,
+                )
 
                 jlptObject = jlptData.get(kana)
                 if jlptObject:
@@ -183,4 +256,5 @@ def createDictonary():
     print("Deleted temporary files!")
     print("DONE...")
 
-createDictonary()
+if __name__ == "__main__":
+    createDictonary()

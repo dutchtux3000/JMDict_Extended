@@ -1,5 +1,5 @@
 # JMDict_Extended
-Adds JLPT level, furigana and pitch accent to the JMDict Dictonary.<br>
+Adds JLPT level, furigana, pitch accent and frequency rank to the JMDict Dictonary.<br>
 JMDict has <a href="https://www.edrdg.org/jmwsgi/updates.py?svc=jmdict&i=1">daily updates</a> 
 but this project will follow the updates from <a href="https://github.com/scriptin/jmdict-simplified">jmdict-simplified</a> at 00:30 AM every Tuesday.
 
@@ -9,9 +9,10 @@ This project combines data from these repositories: <br>
 JMDict files in JSON format: https://github.com/scriptin/jmdict-simplified <br>
 JMDict Furigana files: https://github.com/Doublevil/JmdictFurigana <br>
 JLPT vocabulary in JSON format: https://github.com/Bluskyo/JLPT_Vocabulary <br>
+JPDB frequency kana (Yomitan): https://github.com/Kuuuube/yomitan-dictionaries <br>
 Parsing of Wadoku XML files: https://github.com/IllDepence/anki_add_pitch/blob/master/wadoku_parse.py
 
-## Example on an entry with furigana, JLPT-level and pitch accent data added.
+## Example on an entry with furigana, JLPT-level, pitch accent and frequency data added.
 The json follows the same structrue as jmdict-simplified but with these added properties:
 
 ```
@@ -36,6 +37,16 @@ The json follows the same structrue as jmdict-simplified but with these added pr
                 "accPatts": "1",
                 "zoPatts": "HLLLL"
             },
+            "freq": [  <-----------
+                {
+                    "value": 1415,
+                    "displayValue": "1415"
+                },
+                {
+                    "value": 7595,
+                    "displayValue": "7595㋕"
+                }
+            ],
         }
     ],
     {...},
@@ -51,4 +62,7 @@ Japanese Language Proficiency Test Resources by Jonathan Waller: https://www.tan
 </li>
 <li>
 The Wadoku project by Ulrich Apel: http://www.wadoku.de/
+</li>
+<li>
+JPDB frequency data (JPDB_v2.2_Frequency_Kana) via Kuuuube/yomitan-dictionaries: https://github.com/Kuuuube/yomitan-dictionaries
 </li>
